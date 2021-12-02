@@ -1,23 +1,29 @@
+use std::str::FromStr;
+
+use crate::error::ParseError;
+use crate::util::{parse_lines, read_file};
 use super::prelude::*;
 
-fn read_input(input_path: &PathBuf) -> crate::Result<Vec<(String, i64)>> {
-    let file = File::open(input_path)?;
-    let reader = io::BufReader::new(file);
-    let data: Vec<_> = reader
-        .lines()
-        .map(|line| {
-            let line = line.unwrap();
-            let (direction, amount) = line.split_once(' ').unwrap();
-            (direction.to_owned(), amount.parse::<i64>().unwrap())
-        })
-        .collect();
-    Ok(data)
+struct Instruction {
+    direction: String,
+    amount: i64,
 }
 
-fn part1(input_path: &PathBuf) -> crate::Result<String> {
+impl FromStr for Instruction {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (direction, amount) = s.split_once(' ').ok_or(ParseError::Other("expected delimiter".into()))?;
+        let direction = direction.to_owned();
+        let amount = amount.parse::<i64>()?;
+        Ok(Instruction { direction, amount })
+    }
+}
+
+fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     let mut x = 0_i64;
     let mut y = 0_i64;
-    for (direction, amount) in read_input(input_path)? {
+    for Instruction { direction, amount } in parse_lines(reader) {
         match direction.as_str() {
             "up" => { y -= amount; },
             "down" => { y += amount; },
@@ -28,11 +34,11 @@ fn part1(input_path: &PathBuf) -> crate::Result<String> {
     Ok((x * y).to_string())
 }
 
-fn part2(input_path: &PathBuf) -> crate::Result<String> {
+fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
     let mut x = 0_i64;
     let mut y = 0_i64;
     let mut aim = 0_i64;
-    for (direction, amount) in read_input(input_path)? {
+    for Instruction { direction, amount } in parse_lines(reader) {
         match direction.as_str() {
             "up" => { aim -= amount; },
             "down" => { aim += amount; },
@@ -45,22 +51,41 @@ fn part2(input_path: &PathBuf) -> crate::Result<String> {
 
 pub fn build_runner() -> crate::Runner {
     let mut runner = crate::Runner::default();
-    runner.add_fn("part1", || part1(&"data/day02_input.txt".into()));
-    runner.add_fn("part2", || part2(&"data/day02_input.txt".into()));
+    runner.add_fn("part1", || part1(read_file("data/day02_input.txt")));
+    runner.add_fn("part2", || part2(read_file("data/day02_input.txt")));
     runner
 }
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
+    use crate::util::read_str;
     use super::*;
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(&"data/day02_input.txt".into()).unwrap(), "1727835");
+        assert_eq!(part1(read_str(indoc!{"
+            forward 5
+            down 5
+            forward 8
+            up 3
+            down 8
+            forward 2
+        "})).unwrap(), "150");
+        assert_eq!(part1(read_file("data/day02_input.txt")).unwrap(), "1727835");
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(&"data/day02_input.txt".into()).unwrap(), "1544000595");
+        assert_eq!(part2(read_str(indoc!{"
+            forward 5
+            down 5
+            forward 8
+            up 3
+            down 8
+            forward 2
+        "})).unwrap(), "900");
+        assert_eq!(part2(read_file("data/day02_input.txt")).unwrap(), "1544000595");
     }
 }
