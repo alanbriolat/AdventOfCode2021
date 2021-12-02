@@ -35,3 +35,18 @@ pub fn build_runner() -> crate::Runner {
     runner.add_fn("part2", || part2(&"data/day01_input.txt".into()));
     runner
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_part1() {
+        assert_eq!(part1(&"data/day01_input.txt".into()).unwrap(), "1477");
+    }
+
+    #[test]
+    fn test_part2() {
+        assert_eq!(part2(&"data/day01_input.txt".into()).unwrap(), "1523");
+    }
+}
