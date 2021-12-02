@@ -12,7 +12,8 @@ macro_rules! register_solutions {
     };
 }
 
+#[rustfmt::skip]
 register_solutions!(
     day01,
-    // day02,
+    day02,
 );
