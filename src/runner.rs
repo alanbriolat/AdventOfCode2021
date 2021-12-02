@@ -43,6 +43,10 @@ impl Runner {
         self.solutions.keys().map(|k| k.as_str())
     }
 
+    pub fn get(&self, key: &str) -> Option<&Box<dyn Solution>> {
+        self.solutions.get(key)
+    }
+
     pub fn run(&self, key: &str) -> SolutionResult {
         match self.solutions.get(key) {
             Some(solution) => solution.run(),

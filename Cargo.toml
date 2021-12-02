@@ -10,4 +10,9 @@ itertools = "0.10.1"
 thiserror = "1.0.30"
 
 [dev-dependencies]
+criterion = "0.3.3"
 indoc = "1.0.3"
+
+[[bench]]
+name = "solution_benchmark"
+harness = false
