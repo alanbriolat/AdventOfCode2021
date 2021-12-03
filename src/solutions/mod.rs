@@ -16,4 +16,5 @@ macro_rules! register_solutions {
 register_solutions!(
     day01,
     day02,
+    day03,
 );
