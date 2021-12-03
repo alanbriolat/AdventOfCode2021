@@ -31,6 +31,20 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     Ok((gamma * epsilon).to_string())
 }
 
+/// Partition `values` into `(least, most)` common value at bit `pos` (counting from the left).
+/// If `least` and `most` are the same size, then `least` will contain zeroes and `most` ones.
+fn partition_values(values: &[String], pos: usize) -> (&[String], &[String]) {
+    // (Binary) search for the partition point between 0s and 1s in the current bit position
+    let split = values.partition_point(|v| v.as_bytes()[pos] == '0' as u8);
+    let (zeroes, ones) = values.split_at(split);
+    // Ensure (least, most) common ordering
+    if zeroes.len() > ones.len() {
+        (ones, zeroes)
+    } else {
+        (zeroes, ones)
+    }
+}
+
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
     let mut lines: Vec<String> = parse_lines(reader).collect();
     // If the input is sorted, can apply "bit criteria" filter by partitioning the input
@@ -39,14 +53,7 @@ fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
 
     let mut oxygen = &lines[..];
     for i in 0..bitcount {
-        // Binary search for the partition point between 0s and 1s on the current bit position
-        let split = oxygen.partition_point(|line| line.as_bytes()[i] == '0' as u8);
-        // Keep the larger partition (most common value); if same number of 0s and 1s, keep 1s
-        if split * 2 > oxygen.len() {
-            oxygen = &oxygen[..split];
-        } else {
-            oxygen = &oxygen[split..];
-        }
+        oxygen = partition_values(oxygen, i).1;
         if oxygen.len() == 1 {
             break;
         }
@@ -56,14 +63,7 @@ fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
 
     let mut scrubber = &lines[..];
     for i in 0..bitcount {
-        // Binary search for the partition point between 0s and 1s on the current bit position
-        let split = scrubber.partition_point(|line| line.as_bytes()[i] == '0' as u8);
-        // Keep the larger partition (most common value); if same number of 0s and 1s, keep 0s
-        if split * 2 > scrubber.len() {
-            scrubber = &scrubber[split..];
-        } else {
-            scrubber = &scrubber[..split];
-        }
+        scrubber = partition_values(scrubber, i).0;
         if scrubber.len() == 1 {
             break;
         }
