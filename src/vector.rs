@@ -5,7 +5,7 @@ use std::ops;
 pub trait Coord: num::Integer + num::CheckedSub + num::ToPrimitive + Copy {}
 impl<T: num::Integer + num::CheckedSub + num::ToPrimitive + Copy> Coord for T {}
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Vector<C: Coord, const N: usize>([C; N]);
 
 impl<C: Coord + fmt::Debug, const N: usize> fmt::Debug for Vector<C, N> {

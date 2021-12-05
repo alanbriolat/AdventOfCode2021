@@ -7,7 +7,7 @@ use crate::util::{parse_lines, read_file};
 use crate::vector::Vector;
 use super::prelude::*;
 
-type Point = Vector<u16, 2>;
+type Point = Vector<i16, 2>;
 
 impl FromStr for Point {
     type Err = ParseError;
@@ -18,6 +18,13 @@ impl FromStr for Point {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+enum Orientation {
+    Diagonal,
+    Horizontal,
+    Vertical,
+}
+
 #[derive(Debug)]
 struct Line {
     start: Point,
@@ -25,32 +32,42 @@ struct Line {
 }
 
 impl Line {
-    fn is_horizontal(&self) -> bool {
-        self.start[1] == self.end[1]
-    }
-
-    fn is_vertical(&self) -> bool {
-        self.start[0] == self.end[0]
+    fn orientation(&self) -> Orientation {
+        match ((self.end[0] - self.start[0]).abs(), (self.start[1] - self.end[1]).abs()) {
+            (0, _) => Orientation::Vertical,
+            (_, 0) => Orientation::Horizontal,
+            (a, b) if a == b => Orientation::Diagonal,
+            _ => panic!("non-45-degree diagonal"),
+        }
     }
 
     fn points(&self) -> Box<dyn Iterator<Item = Point>> {
-        if self.is_horizontal() {
-            let y = self.start[1];
-            let (mut start, mut end) = (self.start[0], self.end[0]);
-            if start > end {
-                std::mem::swap(&mut start, &mut end);
+        match self.orientation() {
+            Orientation::Diagonal => {
+                let start = self.start;
+                let direction: Point = [
+                    (self.end[0] - self.start[0]).signum(),
+                    (self.end[1] - self.start[1]).signum(),
+                ].into();
+                let steps = (self.end[0] - self.start[0]).abs();
+                Box::new((0..=steps).map(move |i| start + direction * [i, i]))
             }
-            Box::new((start..=end).map(move |x| [x, y].into()))
-        } else if self.is_vertical() {
-            let x = self.start[0];
-            let (mut start, mut end) = (self.start[1], self.end[1]);
-            if start > end {
-                std::mem::swap(&mut start, &mut end);
+            Orientation::Horizontal => {
+                let y = self.start[1];
+                let (mut start, mut end) = (self.start[0], self.end[0]);
+                if start > end {
+                    std::mem::swap(&mut start, &mut end);
+                }
+                Box::new((start..=end).map(move |x| [x, y].into()))
             }
-            Box::new((start..=end).map(move |y| [x, y].into()))
-        } else {
-            // TODO: what to do with diagonals?
-            Box::new(std::iter::empty())
+            Orientation::Vertical => {
+                let x = self.start[0];
+                let (mut start, mut end) = (self.start[1], self.end[1]);
+                if start > end {
+                    std::mem::swap(&mut start, &mut end);
+                }
+                Box::new((start..=end).map(move |y| [x, y].into()))
+            }
         }
     }
 }
@@ -87,7 +104,9 @@ impl<T: Clone + Eq + Hash> std::ops::Deref for Counter<T> {
 }
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
-    let data: Vec<Line> = parse_lines(reader).collect();
+    let data: Vec<Line> = parse_lines(reader)
+        .filter(|line: &Line| line.orientation() != Orientation::Diagonal)
+        .collect();
     let mut counter = Counter::new();
     for line in data.iter() {
         counter.count(line.points());
@@ -97,7 +116,13 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let data: Vec<Line> = parse_lines(reader).collect();
+    let mut counter = Counter::new();
+    for line in data.iter() {
+        counter.count(line.points());
+    }
+    let count = counter.iter().filter(|(_, &v)| v > 1).count();
+    Ok(count.to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -144,7 +169,7 @@ mod tests {
             3,4 -> 1,4
             0,0 -> 8,8
             5,5 -> 8,2
-        "})).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day05_input.txt")).unwrap(), "???");
+        "})).unwrap(), "12");
+        assert_eq!(part2(read_file("data/day05_input.txt")).unwrap(), "21373");
     }
 }
