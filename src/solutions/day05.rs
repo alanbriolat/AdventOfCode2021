@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
 
+use super::prelude::*;
 use crate::error::ParseError;
 use crate::util::{parse_lines, read_file};
 use crate::vector::Vector;
-use super::prelude::*;
 
 type Point = Vector<i16, 2>;
 
@@ -13,7 +13,9 @@ impl FromStr for Point {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (x, y) = s.split_once(',').ok_or(ParseError::Other("expected ','".into()))?;
+        let (x, y) = s
+            .split_once(',')
+            .ok_or(ParseError::Other("expected ','".into()))?;
         Ok([x.parse()?, y.parse()?].into())
     }
 }
@@ -33,7 +35,10 @@ struct Line {
 
 impl Line {
     fn orientation(&self) -> Orientation {
-        match ((self.end[0] - self.start[0]).abs(), (self.start[1] - self.end[1]).abs()) {
+        match (
+            (self.end[0] - self.start[0]).abs(),
+            (self.start[1] - self.end[1]).abs(),
+        ) {
             (0, _) => Orientation::Vertical,
             (_, 0) => Orientation::Horizontal,
             (a, b) if a == b => Orientation::Diagonal,
@@ -45,10 +50,10 @@ impl Line {
         match self.orientation() {
             Orientation::Diagonal => {
                 let start = self.start;
-                let direction: Point = [
+                let direction: Point = From::from([
                     (self.end[0] - self.start[0]).signum(),
                     (self.end[1] - self.start[1]).signum(),
-                ].into();
+                ]);
                 let steps = (self.end[0] - self.start[0]).abs();
                 Box::new((0..=steps).map(move |i| start + direction * [i, i]))
             }
@@ -76,8 +81,13 @@ impl FromStr for Line {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (start, end) = s.split_once(" -> ").ok_or(ParseError::Other("expected ' -> '".into()))?;
-        Ok(Line { start: start.parse()?, end: end.parse()? })
+        let (start, end) = s
+            .split_once(" -> ")
+            .ok_or(ParseError::Other("expected ' -> '".into()))?;
+        Ok(Line {
+            start: start.parse()?,
+            end: end.parse()?,
+        })
     }
 }
 
@@ -136,40 +146,48 @@ pub fn build_runner() -> crate::Runner {
 mod tests {
     use indoc::indoc;
 
-    use crate::util::read_str;
     use super::*;
+    use crate::util::read_str;
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(read_str(indoc!{"\
-            0,9 -> 5,9
-            8,0 -> 0,8
-            9,4 -> 3,4
-            2,2 -> 2,1
-            7,0 -> 7,4
-            6,4 -> 2,0
-            0,9 -> 2,9
-            3,4 -> 1,4
-            0,0 -> 8,8
-            5,5 -> 8,2
-        "})).unwrap(), "5");
+        assert_eq!(
+            part1(read_str(indoc! {"\
+                0,9 -> 5,9
+                8,0 -> 0,8
+                9,4 -> 3,4
+                2,2 -> 2,1
+                7,0 -> 7,4
+                6,4 -> 2,0
+                0,9 -> 2,9
+                3,4 -> 1,4
+                0,0 -> 8,8
+                5,5 -> 8,2
+            "}))
+            .unwrap(),
+            "5"
+        );
         assert_eq!(part1(read_file("data/day05_input.txt")).unwrap(), "7380");
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(read_str(indoc!{"\
-            0,9 -> 5,9
-            8,0 -> 0,8
-            9,4 -> 3,4
-            2,2 -> 2,1
-            7,0 -> 7,4
-            6,4 -> 2,0
-            0,9 -> 2,9
-            3,4 -> 1,4
-            0,0 -> 8,8
-            5,5 -> 8,2
-        "})).unwrap(), "12");
+        assert_eq!(
+            part2(read_str(indoc! {"\
+                0,9 -> 5,9
+                8,0 -> 0,8
+                9,4 -> 3,4
+                2,2 -> 2,1
+                7,0 -> 7,4
+                6,4 -> 2,0
+                0,9 -> 2,9
+                3,4 -> 1,4
+                0,0 -> 8,8
+                5,5 -> 8,2
+            "}))
+            .unwrap(),
+            "12"
+        );
         assert_eq!(part2(read_file("data/day05_input.txt")).unwrap(), "21373");
     }
 }

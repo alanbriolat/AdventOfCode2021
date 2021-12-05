@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
-use crate::util::{parse_lines, read_file};
 use super::prelude::*;
+use crate::util::{parse_lines, read_file};
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     Ok(parse_lines(reader)
@@ -33,40 +33,48 @@ pub fn build_runner() -> crate::Runner {
 mod tests {
     use indoc::indoc;
 
-    use crate::util::read_str;
     use super::*;
+    use crate::util::read_str;
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(read_str(indoc!{"\
-            199
-            200
-            208
-            210
-            200
-            207
-            240
-            269
-            260
-            263
-        "})).unwrap(), "7");
+        assert_eq!(
+            part1(read_str(indoc! {"\
+                199
+                200
+                208
+                210
+                200
+                207
+                240
+                269
+                260
+                263
+            "}))
+            .unwrap(),
+            "7"
+        );
         assert_eq!(part1(read_file("data/day01_input.txt")).unwrap(), "1477");
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(read_str(indoc!{"\
-            199
-            200
-            208
-            210
-            200
-            207
-            240
-            269
-            260
-            263
-        "})).unwrap(), "5");
+        assert_eq!(
+            part2(read_str(indoc! {"\
+                199
+                200
+                208
+                210
+                200
+                207
+                240
+                269
+                260
+                263
+            "}))
+            .unwrap(),
+            "5"
+        );
         assert_eq!(part2(read_file("data/day01_input.txt")).unwrap(), "1523");
     }
 }

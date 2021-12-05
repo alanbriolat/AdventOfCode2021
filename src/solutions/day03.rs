@@ -1,5 +1,5 @@
-use crate::util::{parse_lines, read_file};
 use super::prelude::*;
+use crate::util::{parse_lines, read_file};
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     let lines: Vec<String> = parse_lines(reader).collect();
@@ -85,44 +85,52 @@ pub fn build_runner() -> crate::Runner {
 mod tests {
     use indoc::indoc;
 
-    use crate::util::read_str;
     use super::*;
+    use crate::util::read_str;
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(read_str(indoc!{"\
-            00100
-            11110
-            10110
-            10111
-            10101
-            01111
-            00111
-            11100
-            10000
-            11001
-            00010
-            01010
-        "})).unwrap(), "198");
+        assert_eq!(
+            part1(read_str(indoc! {"\
+                00100
+                11110
+                10110
+                10111
+                10101
+                01111
+                00111
+                11100
+                10000
+                11001
+                00010
+                01010
+            "}))
+            .unwrap(),
+            "198"
+        );
         assert_eq!(part1(read_file("data/day03_input.txt")).unwrap(), "4191876");
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(read_str(indoc!{"\
-            00100
-            11110
-            10110
-            10111
-            10101
-            01111
-            00111
-            11100
-            10000
-            11001
-            00010
-            01010
-        "})).unwrap(), "230");
+        assert_eq!(
+            part2(read_str(indoc! {"\
+                00100
+                11110
+                10110
+                10111
+                10101
+                01111
+                00111
+                11100
+                10000
+                11001
+                00010
+                01010
+            "}))
+            .unwrap(),
+            "230"
+        );
         assert_eq!(part2(read_file("data/day03_input.txt")).unwrap(), "3414905");
     }
 }
