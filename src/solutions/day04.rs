@@ -1,7 +1,7 @@
-use std::collections::{HashSet, VecDeque}
-;
+use std::collections::{HashSet, VecDeque};
+
 use crate::error::ParseError;
-use crate::util::{parse_lines, read_file};
+use crate::util::read_file;
 use super::prelude::*;
 
 struct Game {
@@ -24,23 +24,31 @@ impl Game {
         Ok(Game { draw, boards })
     }
 
-    fn step(&mut self) -> Option<(Board, u8)> {
+    /// Apply the next drawn number to all the boards, returning copies of any boards that won due
+    /// to that draw. Returns `None` if no more numbers are left to draw.
+    fn step(&mut self) -> Option<Vec<(Board, u8)>> {
         let next = self.draw.pop_front()?;
-        for board in self.boards.iter_mut() {
-            let win = board.remove(next);
-            if win {
-                return Some((board.clone(), next));
+        Some(self.boards.iter_mut().filter_map(|board| {
+            if board.won || !board.apply(next) {
+                None
+            } else {
+                Some((board.clone(), next))
             }
-        }
-        None
+        }).collect())
     }
 
-    fn run(&mut self) -> (Board, u8) {
-        loop {
-            if let Some((board, last)) = self.step() {
-                return (board, last);
-            }
-        }
+    /// Run through the drawn numbers, yielding boards in the order they won, along with the drawn
+    /// number that caused them to win.
+    fn run(&mut self) -> impl Iterator<Item = (Board, u8)> + '_ {
+        std::iter::from_fn(|| self.step()).flatten()
+    }
+
+    fn run_until_first_win(&mut self) -> (Board, u8) {
+        self.run().next().unwrap()
+    }
+
+    fn run_until_last_win(&mut self) -> (Board, u8) {
+        self.run().last().unwrap()
     }
 }
 
@@ -48,6 +56,7 @@ impl Game {
 struct Board {
     rows: Vec<HashSet<u8>>,
     cols: Vec<HashSet<u8>>,
+    won: bool,
 }
 
 impl Board {
@@ -68,26 +77,33 @@ impl Board {
             }
         }
 
-        Ok(Board { rows, cols })
+        Ok(Board { rows, cols, won: false })
     }
 
-    fn remove(&mut self, v: u8) -> bool {
-        let mut win = false;
+    /// Apply `v` to the board, returning `true` if this number caused the board to win. (If the
+    /// board already won, then nothing is changed.)
+    fn apply(&mut self, v: u8) -> bool {
+        if self.won {
+            return false;
+        }
+
         for row in self.rows.iter_mut() {
+            // We won if we removed the last number from a row
             if row.remove(&v) {
                 if row.is_empty() {
-                    win = true;
+                    self.won = true;
                 }
             }
         }
         for col in self.cols.iter_mut() {
+            // We won if we removed the last number from a column
             if col.remove(&v) {
                 if col.is_empty() {
-                    win = true;
+                    self.won = true;
                 }
             }
         }
-        win
+        return self.won;
     }
 
     fn score(&self) -> u64 {
@@ -97,13 +113,16 @@ impl Board {
 
 fn part1<R: BufRead>(mut reader: R) -> crate::Result<String> {
     let mut game = Game::read(&mut reader)?;
-    let (board, last) = game.run();
+    let (board, last) = game.run_until_first_win();
     let score = board.score() * last as u64;
     Ok(score.to_string())
 }
 
-fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+fn part2<R: BufRead>(mut reader: R) -> crate::Result<String> {
+    let mut game = Game::read(&mut reader)?;
+    let (board, last) = game.run_until_last_win();
+    let score = board.score() * last as u64;
+    Ok(score.to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -149,8 +168,26 @@ mod tests {
     #[test]
     fn test_part2() {
         assert_eq!(part2(read_str(indoc!{"\
-            ???
-        "})).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day04_input.txt")).unwrap(), "???");
+            7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+            22 13 17 11  0
+             8  2 23  4 24
+            21  9 14 16  7
+             6 10  3 18  5
+             1 12 20 15 19
+
+             3 15  0  2 22
+             9 18 13 17  5
+            19  8  7 25 23
+            20 11 10 24  4
+            14 21 16 12  6
+
+            14 21 17 24  4
+            10 16 15  9 19
+            18  8 23 26 20
+            22 11 13  6  5
+             2  0 12  3  7
+        "})).unwrap(), "1924");
+        assert_eq!(part2(read_file("data/day04_input.txt")).unwrap(), "23042");
     }
 }
