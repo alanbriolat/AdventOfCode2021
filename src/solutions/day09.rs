@@ -1,3 +1,6 @@
+use std::collections::{HashSet, VecDeque};
+use std::ops::Index;
+
 use num::CheckedSub;
 
 use super::prelude::*;
@@ -59,36 +62,80 @@ impl HeightMap {
     }
 
     fn iter_adjacent_4_values(&self, coord: Coord) -> impl Iterator<Item = u8> + '_ {
-        self.iter_adjacent_4_coords(coord)
-            .filter_map(|coord| self.get(&coord))
+        self.iter_adjacent_4_coords(coord).map(|coord| self[coord])
     }
 
-    fn get(&self, coord: &Coord) -> Option<u8> {
-        Some(self.data[self.index_from_coord(coord)?])
+    fn iter_low_points(&self) -> impl Iterator<Item = (Coord, u8)> + '_ {
+        self.iter_coords().filter_map(|coord| {
+            let height = self[coord];
+            let is_low_point = self
+                .iter_adjacent_4_values(coord)
+                .all(|adjacent_height| adjacent_height > height);
+            if is_low_point {
+                Some((coord, height))
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Get the size of the basin that drains to `low_point`.
+    ///
+    /// Because all basins all drain to a low point, and all locations below height 9 are part of a
+    /// basin, we can apply a flood-fill algorithm from each low point that refuses to traverse a
+    /// height of 9.
+    fn get_basin_size(&self, low_point: Coord) -> u64 {
+        let mut visited: HashSet<Coord> = HashSet::new();
+        let mut next: VecDeque<Coord> = VecDeque::new();
+        let mut size: u64 = 0;
+
+        next.push_back(low_point);
+        visited.insert(low_point);
+
+        while let Some(coord) = next.pop_front() {
+            match self[coord] {
+                0..=8 => {
+                    size += 1;
+                    next.extend(
+                        self.iter_adjacent_4_coords(coord)
+                            .filter(|c| !visited.contains(c)),
+                    );
+                    visited.extend(self.iter_adjacent_4_coords(coord));
+                }
+                _ => {}
+            }
+        }
+
+        size
+    }
+}
+
+impl Index<Coord> for HeightMap {
+    type Output = u8;
+
+    fn index(&self, index: Coord) -> &Self::Output {
+        &self.data[self.index_from_coord(&index).unwrap()]
     }
 }
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     let heightmap = HeightMap::from_reader(reader);
     let result: u64 = heightmap
-        .iter_coords()
-        .filter_map(|coord| {
-            let height = heightmap.get(&coord).unwrap();
-            let is_low_point = heightmap
-                .iter_adjacent_4_values(coord)
-                .all(|adjacent_height| adjacent_height > height);
-            if is_low_point {
-                Some((height + 1) as u64)
-            } else {
-                None
-            }
-        })
+        .iter_low_points()
+        .map(|(_, height)| (height + 1) as u64)
         .sum();
     Ok(result.to_string())
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let heightmap = HeightMap::from_reader(reader);
+    let mut basin_sizes: Vec<u64> = heightmap
+        .iter_low_points()
+        .map(|(coord, _)| heightmap.get_basin_size(coord))
+        .collect();
+    basin_sizes.sort();
+    let result: u64 = basin_sizes[(basin_sizes.len() - 3)..].iter().product();
+    Ok(result.to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -125,11 +172,15 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(read_str(indoc! {"\
-                ???
+                2199943210
+                3987894921
+                9856789892
+                8767896789
+                9899965678
             "}))
             .unwrap(),
-            "???"
+            "1134"
         );
-        assert_eq!(part2(read_file("data/day09_input.txt")).unwrap(), "???");
+        assert_eq!(part2(read_file("data/day09_input.txt")).unwrap(), "1317792");
     }
 }
