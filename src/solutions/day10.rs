@@ -6,7 +6,7 @@ enum SyntaxError {
     #[error("syntax error: illegal character: {0}")]
     IllegalCharacter(char),
     #[error("syntax error: incomplete")]
-    Incomplete,
+    Incomplete(Vec<char>),
 }
 
 impl SyntaxError {
@@ -16,7 +16,21 @@ impl SyntaxError {
             SyntaxError::IllegalCharacter(']') => 57,
             SyntaxError::IllegalCharacter('}') => 1197,
             SyntaxError::IllegalCharacter('>') => 25137,
-            _ => 0,
+            SyntaxError::IllegalCharacter(_) => 0,
+            SyntaxError::Incomplete(stack) => stack
+                .iter()
+                .rev()
+                .copied()
+                .map(|c| -> u64 {
+                    match c {
+                        '(' => 1,
+                        '[' => 2,
+                        '{' => 3,
+                        '<' => 4,
+                        _ => 0,
+                    }
+                })
+                .fold(0, |acc, next| acc * 5 + next),
         }
     }
 }
@@ -37,7 +51,7 @@ fn check_syntax(line: &str) -> Result<(), SyntaxError> {
         }
     }
     if !stack.is_empty() {
-        Err(SyntaxError::Incomplete)
+        Err(SyntaxError::Incomplete(stack))
     } else {
         Ok(())
     }
@@ -55,7 +69,15 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let mut scores: Vec<u64> = reader
+        .lines()
+        .filter_map(|line| match check_syntax(line.unwrap().as_str()) {
+            Err(err @ SyntaxError::Incomplete(_)) => Some(err.score()),
+            _ => None,
+        })
+        .collect();
+    scores.sort();
+    Ok(scores[scores.len() / 2].to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -97,11 +119,23 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(read_str(indoc! {"\
-                ???
+                [({(<(())[]>[[{[]{<()<>>
+                [(()[<>])]({[<{<<[]>>(
+                {([(<{}[<>[]}>{[]{[(<()>
+                (((({<>}<{<{<>}{[]{[]{}
+                [[<[([]))<([[{}[[()]]]
+                [{[{({}]{}}([{[{{{}}([]
+                {<[[]]>}<{[{[{[]{()[[[]
+                [<(<(<(<{}))><([]([]()
+                <{([([[(<>()){}]>(<<{{
+                <{([{{}}[<[[[<>{}]]]>[]]
             "}))
             .unwrap(),
-            "???"
+            "288957"
         );
-        assert_eq!(part2(read_file("data/day10_input.txt")).unwrap(), "???");
+        assert_eq!(
+            part2(read_file("data/day10_input.txt")).unwrap(),
+            "2389738699"
+        );
     }
 }
