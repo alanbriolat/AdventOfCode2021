@@ -1,4 +1,5 @@
 pub mod error;
+pub mod grid;
 pub mod runner;
 pub mod solutions;
 pub mod util;
