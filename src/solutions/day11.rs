@@ -9,7 +9,6 @@ type Point = <Grid as crate::grid::GridOps>::Point;
 
 struct State {
     grid: Grid,
-    flashes: u64,
 }
 
 impl State {
@@ -23,11 +22,11 @@ impl State {
                 raw.iter()
                     .flat_map(|line| line.bytes().map(|b| b - '0' as u8)),
             ),
-            flashes: 0,
         }
     }
 
-    fn step(&mut self) {
+    fn step(&mut self) -> u64 {
+        let mut flashes: u64 = 0;
         let mut flashing: VecDeque<Point> = VecDeque::new();
         for p in self.grid.iter_points() {
             self.grid[p] += 1;
@@ -37,7 +36,7 @@ impl State {
             }
             // Processing flashing octopuses until the chain reaction stops
             while let Some(p) = flashing.pop_front() {
-                self.flashes += 1;
+                flashes += 1;
                 for adj in self.grid.iter_adjacent_8(&p) {
                     self.grid[adj] += 1;
                     if self.grid[adj] == 10 {
@@ -52,19 +51,25 @@ impl State {
                 self.grid[p] = 0;
             }
         }
+        flashes
     }
 }
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     let mut state = State::from_reader(reader);
-    for _ in 0..100 {
-        state.step();
-    }
-    Ok(state.flashes.to_string())
+    Ok(std::iter::repeat_with(|| state.step())
+        .take(100)
+        .sum::<u64>()
+        .to_string())
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let mut state = State::from_reader(reader);
+    Ok(std::iter::repeat_with(|| state.step())
+        .enumerate()
+        .find_map(|(i, flashes)| if flashes == 100 { Some(i + 1) } else { None })
+        .unwrap()
+        .to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -106,11 +111,20 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(read_str(indoc! {"\
-                ???
+                5483143223
+                2745854711
+                5264556173
+                6141336146
+                6357385478
+                4167524645
+                2176841721
+                6882881134
+                4846848554
+                5283751526
             "}))
             .unwrap(),
-            "???"
+            "195"
         );
-        assert_eq!(part2(read_file("data/day11_input.txt")).unwrap(), "???");
+        assert_eq!(part2(read_file("data/day11_input.txt")).unwrap(), "312");
     }
 }
