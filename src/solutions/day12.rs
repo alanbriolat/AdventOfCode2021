@@ -17,10 +17,6 @@ impl FromStr for Node {
 }
 
 impl Node {
-    fn is_small(&self) -> bool {
-        self.0.as_bytes()[0].is_ascii_lowercase()
-    }
-
     fn is_large(&self) -> bool {
         self.0.as_bytes()[0].is_ascii_uppercase()
     }
@@ -37,12 +33,16 @@ impl FromStr for Edge {
     }
 }
 
-#[derive(Debug)]
-struct Path(Vec<Node>);
+#[derive(Clone, Debug)]
+struct Path(Vec<Node>, u8);
 
 impl Path {
     fn new(initial: Node) -> Path {
-        Path(vec![initial])
+        Path(vec![initial], 0)
+    }
+
+    fn with_revisits(self, n: u8) -> Path {
+        Path(self.0, n)
     }
 
     fn last(&self) -> &Node {
@@ -50,13 +50,18 @@ impl Path {
     }
 
     fn try_add(&self, node: Node) -> Option<Path> {
-        if node.is_large() || !self.0.contains(&node) {
-            let mut path = self.0.clone();
-            path.push(node);
-            Some(Path(path))
+        let mut next = self.clone();
+        if node.is_large() {
+            next.0.push(node);
+        } else if !next.0.contains(&node) {
+            next.0.push(node);
+        } else if next.1 > 0 {
+            next.1 -= 1;
+            next.0.push(node);
         } else {
-            None
+            return None;
         }
+        Some(next)
     }
 }
 
@@ -66,46 +71,53 @@ struct CaveMap {
 
 impl CaveMap {
     fn from_reader<R: BufRead>(reader: R) -> CaveMap {
+        // Parse all edges as bidirectional
         let mut edges: HashMap<Node, HashSet<Node>> = HashMap::new();
         for Edge(a, b) in parse_lines::<Edge, R>(reader) {
             edges.entry(a.clone()).or_default().insert(b.clone());
             edges.entry(b).or_default().insert(a);
         }
+
+        // Remove edges towards "start" or away from "end", since both can only be visited once
+        let start = Node("start".into());
+        let end = Node("end".into());
+        edges.remove(&end);
+        for (_, next) in edges.iter_mut() {
+            next.remove(&start);
+        }
+
         CaveMap { edges }
     }
 
     fn iter_paths(&self, path: Path) -> Box<dyn Iterator<Item = Path> + '_> {
-        Box::new(
-            self.edges
-                .get(path.last())
-                .unwrap()
-                .iter()
-                .filter_map(move |next| {
-                    path.try_add(next.clone()).map(|next_path| {
-                        if next_path.last() == &Node("end".into()) {
-                            Box::new(std::iter::once(next_path))
-                        } else {
-                            self.iter_paths(next_path)
-                        }
+        match self.edges.get(path.last()) {
+            Some(candidates) => Box::new(
+                candidates
+                    .iter()
+                    .filter_map(move |next| {
+                        path.try_add(next.clone())
+                            .map(|next_path| self.iter_paths(next_path))
                     })
-                })
-                .flatten(),
-        )
+                    .flatten(),
+            ),
+            None => Box::new(std::iter::once(path)),
+        }
     }
 
-    fn iter_all_paths(&self) -> Box<dyn Iterator<Item = Path> + '_> {
-        let initial = Path::new(Node("start".into()));
+    fn iter_all_paths(&self, revisits: u8) -> Box<dyn Iterator<Item = Path> + '_> {
+        let initial = Path::new(Node("start".into())).with_revisits(revisits);
         self.iter_paths(initial)
     }
 }
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     let cave_map = CaveMap::from_reader(reader);
-    Ok(cave_map.iter_all_paths().count().to_string())
+    Ok(cave_map.iter_all_paths(0).count().to_string())
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let cave_map = CaveMap::from_reader(reader);
+    Ok(cave_map.iter_all_paths(1).count().to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -117,10 +129,7 @@ pub fn build_runner() -> crate::Runner {
 
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
-
     use super::*;
-    use crate::util::read_str;
 
     #[test]
     fn test_part1() {
@@ -132,9 +141,9 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(read_file("data/day12_example1.txt")).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day12_example2.txt")).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day12_example3.txt")).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day12_input.txt")).unwrap(), "???");
+        assert_eq!(part2(read_file("data/day12_example1.txt")).unwrap(), "36");
+        assert_eq!(part2(read_file("data/day12_example2.txt")).unwrap(), "103");
+        assert_eq!(part2(read_file("data/day12_example3.txt")).unwrap(), "3509");
+        assert_eq!(part2(read_file("data/day12_input.txt")).unwrap(), "131254");
     }
 }
