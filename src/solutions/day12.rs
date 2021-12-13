@@ -1,25 +1,15 @@
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::str::FromStr;
 
 use super::prelude::*;
 use crate::error::ParseError;
 use crate::util::{parse_lines, read_file};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct Node(String);
+type Node = Rc<String>;
 
-impl FromStr for Node {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Node(s.to_owned()))
-    }
-}
-
-impl Node {
-    fn is_large(&self) -> bool {
-        self.0.as_bytes()[0].is_ascii_uppercase()
-    }
+fn is_large(cave: &str) -> bool {
+    cave.as_bytes()[0].is_ascii_uppercase()
 }
 
 struct Edge(Node, Node);
@@ -29,7 +19,7 @@ impl FromStr for Edge {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (a, b) = s.split_once('-').unwrap();
-        Ok(Edge(a.parse()?, b.parse()?))
+        Ok(Edge(Node::new(a.to_owned()), Node::new(b.to_owned())))
     }
 }
 
@@ -51,7 +41,7 @@ impl Path {
 
     fn try_add(&self, node: Node) -> Option<Path> {
         let mut next = self.clone();
-        if node.is_large() {
+        if is_large(&node) {
             next.0.push(node);
         } else if !next.0.contains(&node) {
             next.0.push(node);
@@ -79,11 +69,9 @@ impl CaveMap {
         }
 
         // Remove edges towards "start" or away from "end", since both can only be visited once
-        let start = Node("start".into());
-        let end = Node("end".into());
-        edges.remove(&end);
+        edges.remove(&Node::new("end".into()));
         for (_, next) in edges.iter_mut() {
-            next.remove(&start);
+            next.remove(&Node::new("start".into()));
         }
 
         CaveMap { edges }
@@ -105,7 +93,7 @@ impl CaveMap {
     }
 
     fn iter_all_paths(&self, revisits: u8) -> Box<dyn Iterator<Item = Path> + '_> {
-        let initial = Path::new(Node("start".into())).with_revisits(revisits);
+        let initial = Path::new(Node::new("start".into())).with_revisits(revisits);
         self.iter_paths(initial)
     }
 }
