@@ -87,6 +87,26 @@ impl Page {
             false
         }
     }
+
+    fn to_string(&self) -> String {
+        let extent = self
+            .dots
+            .iter()
+            .fold(Point::from([0, 0]), |acc, dot| acc.max(dot))
+            + [1, 1];
+        let mut output = String::with_capacity((extent[0] as usize + 1) * extent[1] as usize);
+        for y in 0..extent[1] {
+            for x in 0..extent[0] {
+                if self.dots.contains(&Point::from([x, y])) {
+                    output.push('#');
+                } else {
+                    output.push(' ');
+                }
+            }
+            output.push('\n');
+        }
+        output
+    }
 }
 
 fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
@@ -96,7 +116,9 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
 }
 
 fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
-    todo!()
+    let mut page = Page::from_reader(reader);
+    while page.step() {}
+    Ok(format!("\n{}", page.to_string()))
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -108,6 +130,8 @@ pub fn build_runner() -> crate::Runner {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
     use super::*;
 
     #[test]
@@ -118,7 +142,28 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(read_file("data/day13_example1.txt")).unwrap(), "???");
-        assert_eq!(part2(read_file("data/day13_input.txt")).unwrap(), "???");
+        assert_eq!(
+            part2(read_file("data/day13_example1.txt")).unwrap(),
+            indoc! {"
+
+                #####
+                #   #
+                #   #
+                #   #
+                #####
+            "}
+        );
+        assert_eq!(
+            part2(read_file("data/day13_input.txt")).unwrap(),
+            indoc! {"
+
+                 ##  #    ###  #### #  # #### #  # #  #
+                #  # #    #  # #    # #  #    # #  #  #
+                #  # #    #  # ###  ##   ###  ##   #  #
+                #### #    ###  #    # #  #    # #  #  #
+                #  # #    # #  #    # #  #    # #  #  #
+                #  # #### #  # #### #  # #    #  #  ## 
+            "}
+        );
     }
 }
