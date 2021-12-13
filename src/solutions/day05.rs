@@ -9,17 +9,6 @@ use crate::vector::Vector;
 
 type Point = Vector<i16, 2>;
 
-impl FromStr for Point {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (x, y) = s
-            .split_once(',')
-            .ok_or(ParseError::Other("expected ','".into()))?;
-        Ok([x.parse()?, y.parse()?].into())
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 enum Orientation {
     Diagonal,

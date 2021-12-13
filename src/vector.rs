@@ -1,6 +1,7 @@
 use std::cmp;
 use std::fmt;
 use std::ops;
+use std::str::FromStr;
 
 pub trait Coord: num::Integer + num::CheckedSub + num::ToPrimitive + Copy {}
 impl<T: num::Integer + num::CheckedSub + num::ToPrimitive + Copy> Coord for T {}
@@ -107,6 +108,18 @@ impl<C: Coord, const N: usize> Vector<C, N> {
             new[i] = cmp::max(new[i], rhs[i]);
         }
         new
+    }
+}
+
+impl<C: Coord + FromStr, const N: usize> FromStr for Vector<C, N> {
+    type Err = C::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut new = Self::default();
+        for (i, part) in s.split(',').enumerate() {
+            new[i] = part.parse()?;
+        }
+        Ok(new)
     }
 }
 

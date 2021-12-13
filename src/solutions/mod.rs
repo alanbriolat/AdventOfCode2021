@@ -10,6 +10,7 @@ mod day09;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 
 pub mod prelude;
 
@@ -37,4 +38,5 @@ register_solutions!(
     day10,
     day11,
     day12,
+    day13,
 );
