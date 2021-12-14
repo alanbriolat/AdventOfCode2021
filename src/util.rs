@@ -64,3 +64,12 @@ impl<T: Clone + Eq + Hash> std::ops::Deref for Counter<T> {
         &self.0
     }
 }
+
+impl<T: Clone + Eq + Hash> IntoIterator for Counter<T> {
+    type Item = (T, usize);
+    type IntoIter = std::collections::hash_map::IntoIter<T, usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
