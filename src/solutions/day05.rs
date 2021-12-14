@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::str::FromStr;
 
 use super::prelude::*;
 use crate::error::ParseError;
-use crate::util::{parse_lines, read_file};
+use crate::util::{parse_lines, read_file, Counter};
 use crate::vector::Vector;
 
 type Point = Vector<i16, 2>;
@@ -77,28 +75,6 @@ impl FromStr for Line {
             start: start.parse()?,
             end: end.parse()?,
         })
-    }
-}
-
-struct Counter<T: Clone + Eq + Hash>(HashMap<T, usize>);
-
-impl<T: Clone + Eq + Hash> Counter<T> {
-    fn new() -> Self {
-        Counter(HashMap::new())
-    }
-
-    fn count<I: IntoIterator<Item = T>>(&mut self, items: I) {
-        for item in items {
-            *self.0.entry(item).or_default() += 1;
-        }
-    }
-}
-
-impl<T: Clone + Eq + Hash> std::ops::Deref for Counter<T> {
-    type Target = HashMap<T, usize>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
