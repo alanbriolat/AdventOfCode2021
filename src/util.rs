@@ -6,6 +6,8 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::FromStr;
 
+use crate::grid::Grid;
+
 pub fn read_file<P: AsRef<Path>>(path: P) -> impl BufRead {
     let file = File::open(path).unwrap();
     io::BufReader::new(file)
@@ -20,6 +22,14 @@ pub fn read_line<R: BufRead>(mut reader: R) -> String {
     reader.read_line(&mut line).unwrap();
     line.truncate(line.len() - 1);
     line
+}
+
+pub fn read_number_grid<R: BufRead>(reader: R) -> Grid<u8, 2> {
+    let raw: Vec<String> = parse_lines(reader).collect();
+    Grid::new([raw[0].len() as i64, raw.len() as i64]).with_data(
+        raw.iter()
+            .flat_map(|line| line.bytes().map(|b| b - '0' as u8)),
+    )
 }
 
 pub fn parse_lines<T, R>(reader: R) -> impl Iterator<Item = T>
@@ -40,8 +50,6 @@ where
 {
     input.split(pattern).map(|x| x.parse::<T>().unwrap())
 }
-
-pub trait BufReadExt: BufRead {}
 
 pub struct Counter<T: Clone + Eq + Hash>(HashMap<T, usize>);
 

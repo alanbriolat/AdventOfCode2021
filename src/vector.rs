@@ -27,6 +27,20 @@ impl<C: Coord, const N: usize> From<[C; N]> for Vector<C, N> {
     }
 }
 
+impl<C: Coord, const N: usize> TryFrom<&[C]> for Vector<C, N> {
+    type Error = ();
+
+    fn try_from(value: &[C]) -> Result<Self, Self::Error> {
+        if value.len() != N {
+            Err(())
+        } else {
+            let mut new = Self::default();
+            new.0.copy_from_slice(value);
+            Ok(new)
+        }
+    }
+}
+
 impl<C: Coord, const N: usize> AsRef<[C]> for Vector<C, N> {
     fn as_ref(&self) -> &[C] {
         self.0.as_ref()

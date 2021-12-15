@@ -1,11 +1,11 @@
 use std::collections::VecDeque;
 
 use super::prelude::*;
-use crate::grid::{DynamicGrid2D, GridOps};
-use crate::util::{parse_lines, read_file};
+use crate::grid;
+use crate::util::{read_file, read_number_grid};
 
-type Grid = DynamicGrid2D<u8>;
-type Point = <Grid as crate::grid::GridOps>::Point;
+type Grid = grid::Grid<u8, 2>;
+type Point = grid::Point<2>;
 
 struct State {
     grid: Grid,
@@ -13,15 +13,8 @@ struct State {
 
 impl State {
     fn from_reader<R: BufRead>(reader: R) -> State {
-        let raw: Vec<String> = parse_lines(reader).collect();
-        let (width, height) = (raw[0].len(), raw.len());
         State {
-            grid: Grid::new(
-                width,
-                height,
-                raw.iter()
-                    .flat_map(|line| line.bytes().map(|b| b - '0' as u8)),
-            ),
+            grid: read_number_grid(reader),
         }
     }
 
@@ -37,7 +30,7 @@ impl State {
             // Processing flashing octopuses until the chain reaction stops
             while let Some(p) = flashing.pop_front() {
                 flashes += 1;
-                for adj in self.grid.iter_adjacent_8(&p) {
+                for adj in self.grid.iter_adjacent_8_points(p) {
                     self.grid[adj] += 1;
                     if self.grid[adj] == 10 {
                         flashing.push_back(adj);
