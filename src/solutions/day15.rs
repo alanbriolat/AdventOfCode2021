@@ -3,6 +3,8 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt;
 use std::rc::Rc;
 
+use num::Integer;
+
 use super::prelude::*;
 use crate::grid;
 use crate::util::{read_file, read_number_grid};
@@ -19,6 +21,18 @@ impl Cave {
         Cave {
             grid: read_number_grid(reader),
         }
+    }
+
+    fn full_size(&self) -> Cave {
+        let size = self.grid.size();
+        let mut grid = Grid::new(size * [5, 5]);
+        let points = grid.iter_points();
+        grid = grid.with_data(points.map(|p| {
+            let (x_quot, x_rem) = p[0].div_rem(&size[0]);
+            let (y_quot, y_rem) = p[1].div_rem(&size[1]);
+            (self.grid[[x_rem, y_rem]] + x_quot as u8 + y_quot as u8 - 1) % 9 + 1
+        }));
+        Cave { grid }
     }
 }
 
@@ -115,6 +129,7 @@ impl fmt::Debug for State {
     }
 }
 
+// TODO: use A* to direct to a solution faster
 fn shortest_path_dijkstra<F, I>(start: Point, end: Point, next: F) -> Option<State>
 where
     F: Fn(Point) -> I,
@@ -169,8 +184,17 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     Ok(path.unwrap().cost.to_string())
 }
 
-fn part2<R: BufRead>(_reader: R) -> crate::Result<String> {
-    todo!()
+fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
+    let small_cave = Cave::from_reader(reader);
+    let cave = small_cave.full_size();
+    let start = cave.grid.min_point();
+    let end = cave.grid.max_point();
+    let path = shortest_path_dijkstra(start, end, |point| {
+        cave.grid
+            .iter_adjacent_4_points(point)
+            .map(|p| (p, cave.grid[p] as usize))
+    });
+    Ok(path.unwrap().cost.to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -212,11 +236,20 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(read_str(indoc! {"\
-                ???
+                1163751742
+                1381373672
+                2136511328
+                3694931569
+                7463417111
+                1319128137
+                1359912421
+                3125421639
+                1293138521
+                2311944581
             "}))
             .unwrap(),
-            "???"
+            "315"
         );
-        assert_eq!(part2(read_file("data/day15_input.txt")).unwrap(), "???");
+        assert_eq!(part2(read_file("data/day15_input.txt")).unwrap(), "2825");
     }
 }
