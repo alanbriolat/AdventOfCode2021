@@ -53,7 +53,7 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
 }
 
 fn part2<R: BufRead>(_reader: R) -> crate::Result<String> {
-    todo!()
+    Err(crate::Error::Other("not implemented".into()))
 }
 
 pub fn build_runner() -> crate::Runner {
