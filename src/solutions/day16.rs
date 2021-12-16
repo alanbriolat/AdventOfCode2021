@@ -5,12 +5,84 @@ use bitvec::prelude::*;
 use super::prelude::*;
 use crate::util::read_file;
 
-const TYPE_LITERAL: u8 = 4;
+#[derive(Debug, Eq, PartialEq)]
+enum Operator {
+    Sum,
+    Product,
+    Minimum,
+    Maximum,
+    Literal,
+    GreaterThan,
+    LessThan,
+    Equal,
+}
+
+impl TryFrom<u8> for Operator {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Operator::Sum,
+            1 => Operator::Product,
+            2 => Operator::Minimum,
+            3 => Operator::Maximum,
+            4 => Operator::Literal,
+            5 => Operator::GreaterThan,
+            6 => Operator::LessThan,
+            7 => Operator::Equal,
+            _ => {
+                return Err(());
+            }
+        })
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 enum Data {
     Literal(u64),
-    Operator { operator: u8, inner: Vec<Packet> },
+    Operator {
+        operator: Operator,
+        inner: Vec<Packet>,
+    },
+}
+
+impl Data {
+    fn evaluate(&self) -> u64 {
+        match self {
+            Data::Literal(literal) => *literal,
+            Data::Operator { operator, inner } => {
+                let mut inner = inner.iter().map(|packet| packet.data.evaluate());
+                match operator {
+                    Operator::Sum => inner.sum(),
+                    Operator::Product => inner.product(),
+                    Operator::Minimum => inner.min().unwrap(),
+                    Operator::Maximum => inner.max().unwrap(),
+                    Operator::GreaterThan => {
+                        if inner.next().unwrap() > inner.next().unwrap() {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    Operator::LessThan => {
+                        if inner.next().unwrap() < inner.next().unwrap() {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    Operator::Equal => {
+                        if inner.next().unwrap() == inner.next().unwrap() {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    _ => panic!("impossible"),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -74,8 +146,8 @@ impl<'a> Parser<'a> {
         self.read_u8(3)
     }
 
-    fn parse_type_id(&mut self) -> Option<u8> {
-        self.read_u8(3)
+    fn parse_operator(&mut self) -> Option<Operator> {
+        Operator::try_from(self.read_u8(3)?).ok()
     }
 
     fn parse_length_type_id(&mut self) -> Option<u8> {
@@ -117,22 +189,19 @@ impl<'a> Parser<'a> {
 
     fn parse_packet(&mut self) -> Option<Packet> {
         let version = self.parse_version()?;
-        let type_id = self.parse_type_id()?;
 
-        if type_id == TYPE_LITERAL {
-            Some(Packet {
+        match self.parse_operator()? {
+            Operator::Literal => Some(Packet {
                 version,
                 data: Data::Literal(self.parse_literal()?),
-            })
-        } else {
-            let inner = self.parse_sub_packets()?;
-            Some(Packet {
+            }),
+            operator => Some(Packet {
                 version,
                 data: Data::Operator {
-                    operator: type_id,
-                    inner,
+                    operator,
+                    inner: self.parse_sub_packets()?,
                 },
-            })
+            }),
         }
     }
 
@@ -159,8 +228,11 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     Ok(sum.to_string())
 }
 
-fn part2<R: BufRead>(_reader: R) -> crate::Result<String> {
-    Err(crate::Error::Other("not implemented".into()))
+fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
+    let input = Input::from_reader(reader);
+    let mut parser = Parser::new(&input);
+    let packet = parser.parse_packet().unwrap();
+    Ok(packet.data.evaluate().to_string())
 }
 
 pub fn build_runner() -> crate::Runner {
@@ -172,8 +244,6 @@ pub fn build_runner() -> crate::Runner {
 
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
-
     use super::*;
     use crate::util::read_str;
 
@@ -183,7 +253,10 @@ mod tests {
 
         let mut parser = Parser::new(&input);
         assert_eq!(parser.parse_version(), Some(6));
-        assert_eq!(parser.parse_type_id(), Some(4));
+        assert_eq!(
+            parser.parse_operator(),
+            Some(Operator::try_from(4).unwrap())
+        );
         assert_eq!(parser.parse_literal(), Some(2021));
 
         let mut parser = Parser::new(&input);
@@ -206,7 +279,7 @@ mod tests {
             Some(Packet {
                 version: 1,
                 data: Data::Operator {
-                    operator: 6,
+                    operator: Operator::try_from(6).unwrap(),
                     inner: vec![
                         Packet {
                             version: 6,
@@ -231,7 +304,7 @@ mod tests {
             Some(Packet {
                 version: 7,
                 data: Data::Operator {
-                    operator: 3,
+                    operator: Operator::try_from(3).unwrap(),
                     inner: vec![
                         Packet {
                             version: 2,
@@ -268,13 +341,17 @@ mod tests {
 
     #[test]
     fn test_part2() {
+        assert_eq!(part2(read_str("C200B40A82")).unwrap(), "3");
+        assert_eq!(part2(read_str("04005AC33890")).unwrap(), "54");
+        assert_eq!(part2(read_str("880086C3E88112")).unwrap(), "7");
+        assert_eq!(part2(read_str("CE00C43D881120")).unwrap(), "9");
+        assert_eq!(part2(read_str("D8005AC2A8F0")).unwrap(), "1");
+        assert_eq!(part2(read_str("F600BC2D8F")).unwrap(), "0");
+        assert_eq!(part2(read_str("9C005AC2F8F0")).unwrap(), "0");
+        assert_eq!(part2(read_str("9C0141080250320F1802104A08")).unwrap(), "1");
         assert_eq!(
-            part2(read_str(indoc! {"\
-                ???
-            "}))
-            .unwrap(),
-            "???"
+            part2(read_file("data/day16_input.txt")).unwrap(),
+            "2056021084691"
         );
-        assert_eq!(part2(read_file("data/day16_input.txt")).unwrap(), "???");
     }
 }
