@@ -92,7 +92,7 @@ impl Page {
         let extent = self
             .dots
             .iter()
-            .fold(Point::from([0, 0]), |acc, dot| acc.max(dot))
+            .fold(Point::from([0, 0]), |acc, dot| acc.merge_max(dot))
             + [1, 1];
         let mut output = String::with_capacity((extent[0] as usize + 1) * extent[1] as usize);
         for y in 0..extent[1] {

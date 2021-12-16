@@ -6,7 +6,7 @@ use std::str::FromStr;
 pub trait Coord: num::Integer + num::CheckedSub + num::ToPrimitive + Copy {}
 impl<T: num::Integer + num::CheckedSub + num::ToPrimitive + Copy> Coord for T {}
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Vector<C: Coord, const N: usize>([C; N]);
 
 impl<C: Coord + fmt::Debug, const N: usize> fmt::Debug for Vector<C, N> {
@@ -108,7 +108,7 @@ impl<C: Coord, const N: usize> num::CheckedSub for Vector<C, N> {
 }
 
 impl<C: Coord, const N: usize> Vector<C, N> {
-    pub fn min(&self, rhs: &Self) -> Self {
+    pub fn merge_min(&self, rhs: &Self) -> Self {
         let mut new = self.clone();
         for i in 0..N {
             new[i] = cmp::min(new[i], rhs[i]);
@@ -116,7 +116,7 @@ impl<C: Coord, const N: usize> Vector<C, N> {
         new
     }
 
-    pub fn max(&self, rhs: &Self) -> Self {
+    pub fn merge_max(&self, rhs: &Self) -> Self {
         let mut new = self.clone();
         for i in 0..N {
             new[i] = cmp::max(new[i], rhs[i]);
