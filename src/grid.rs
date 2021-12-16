@@ -28,6 +28,14 @@ impl<const N: usize> Extent<N> {
         (0..N).all(|i| point[i] >= 0 && point[i] < self.0[i])
     }
 
+    fn min_point(&self) -> Point<N> {
+        [0; N].into()
+    }
+
+    fn max_point(&self) -> Point<N> {
+        self.0 - [1; N]
+    }
+
     fn row_major_index(&self, point: Point<N>) -> Option<usize> {
         if self.contains(point) {
             let size = self.0.as_ref();
@@ -91,6 +99,14 @@ impl<T, const N: usize> Grid<T, N> {
         self
     }
 
+    pub fn size(&self) -> Point<N> {
+        self.extent.0
+    }
+
+    pub fn offset(&self) -> Point<N> {
+        self.offset
+    }
+
     pub fn contains<P: Into<Point<N>>>(&self, point: P) -> bool {
         self.extent.contains(point.into() - self.offset)
     }
@@ -100,11 +116,11 @@ impl<T, const N: usize> Grid<T, N> {
     }
 
     pub fn min_point(&self) -> Point<N> {
-        self.offset
+        self.extent.min_point() + self.offset
     }
 
     pub fn max_point(&self) -> Point<N> {
-        self.extent.0 - [1; N] + self.offset
+        self.extent.max_point() + self.offset
     }
 
     pub fn iter_points(&self) -> impl Iterator<Item = Point<N>> {
@@ -121,6 +137,10 @@ impl<T, const N: usize> Grid<T, N> {
         self.row_major_index(point.into())
             .and_then(|i| self.data.get_mut(i))
     }
+
+    pub fn view(&mut self, extent: Point<N>, offset: Point<N>) -> Option<GridView<'_, T, N>> {
+        GridView::new(self, Extent::try_from(extent).ok()?, offset)
+    }
 }
 
 impl<T, P: Into<Point<N>>, const N: usize> ops::Index<P> for Grid<T, N> {
@@ -134,6 +154,74 @@ impl<T, P: Into<Point<N>>, const N: usize> ops::Index<P> for Grid<T, N> {
 impl<T, P: Into<Point<N>>, const N: usize> ops::IndexMut<P> for Grid<T, N> {
     fn index_mut(&mut self, index: P) -> &mut Self::Output {
         &mut self.data[self.extent.row_major_index(index.into()).unwrap()]
+    }
+}
+
+pub struct GridView<'a, T, const N: usize> {
+    grid: &'a mut Grid<T, N>,
+    extent: Extent<N>,
+    offset: Point<N>,
+}
+
+impl<'a, T, const N: usize> GridView<'a, T, N> {
+    fn new(
+        grid: &'a mut Grid<T, N>,
+        extent: Extent<N>,
+        offset: Point<N>,
+    ) -> Option<GridView<'a, T, N>> {
+        if !grid.contains(extent.min_point() + offset) {
+            None
+        } else if !grid.contains(extent.max_point() + offset) {
+            None
+        } else {
+            Some(GridView {
+                grid,
+                extent,
+                offset,
+            })
+        }
+    }
+
+    pub fn size(&self) -> Point<N> {
+        self.extent.0
+    }
+
+    pub fn min_point(&self) -> Point<N> {
+        self.extent.min_point()
+    }
+
+    pub fn max_point(&self) -> Point<N> {
+        self.extent.max_point()
+    }
+
+    pub fn contains<P: Into<Point<N>>>(&self, point: P) -> bool {
+        self.extent.contains(point.into())
+    }
+
+    pub fn iter_points(&self) -> impl Iterator<Item = Point<N>> {
+        self.extent.iter_points()
+    }
+
+    pub fn get<P: Into<Point<N>>>(&self, point: P) -> Option<&T> {
+        self.grid.get(point.into() + self.offset)
+    }
+
+    pub fn get_mut<P: Into<Point<N>>>(&mut self, point: P) -> Option<&mut T> {
+        self.grid.get_mut(point.into() + self.offset)
+    }
+}
+
+impl<'a, T, P: Into<Point<N>>, const N: usize> ops::Index<P> for GridView<'a, T, N> {
+    type Output = T;
+
+    fn index(&self, index: P) -> &Self::Output {
+        &self.grid[index]
+    }
+}
+
+impl<'a, T, P: Into<Point<N>>, const N: usize> ops::IndexMut<P> for GridView<'a, T, N> {
+    fn index_mut(&mut self, index: P) -> &mut Self::Output {
+        &mut self.grid[index]
     }
 }
 
