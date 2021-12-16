@@ -169,7 +169,7 @@ fn part1<R: BufRead>(reader: R) -> crate::Result<String> {
     Ok(path.unwrap().cost.to_string())
 }
 
-fn part2<R: BufRead>(reader: R) -> crate::Result<String> {
+fn part2<R: BufRead>(_reader: R) -> crate::Result<String> {
     todo!()
 }
 
