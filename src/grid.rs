@@ -99,6 +99,14 @@ impl<T, const N: usize> Grid<T, N> {
         self.extent.row_major_index(point - self.offset)
     }
 
+    pub fn min_point(&self) -> Point<N> {
+        self.offset
+    }
+
+    pub fn max_point(&self) -> Point<N> {
+        self.extent.0 - [1; N] + self.offset
+    }
+
     pub fn iter_points(&self) -> impl Iterator<Item = Point<N>> {
         let offset = self.offset;
         self.extent.iter_points().map(move |point| point + offset)

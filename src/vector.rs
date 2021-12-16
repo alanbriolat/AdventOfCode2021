@@ -3,6 +3,8 @@ use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
+use num::Signed;
+
 pub trait Coord: num::Integer + num::CheckedSub + num::ToPrimitive + Copy {}
 impl<T: num::Integer + num::CheckedSub + num::ToPrimitive + Copy> Coord for T {}
 
@@ -122,6 +124,26 @@ impl<C: Coord, const N: usize> Vector<C, N> {
             new[i] = cmp::max(new[i], rhs[i]);
         }
         new
+    }
+}
+
+// impl<C: Coord + Unsigned, const N: usize> Vector<C, N> {
+//     pub fn manhattan_length(&self) -> C {
+//         let mut sum = C::zero();
+//         for v in self.0 {
+//             sum = sum + v;
+//         }
+//         sum
+//     }
+// }
+
+impl<C: Coord + Signed, const N: usize> Vector<C, N> {
+    pub fn manhattan_length(&self) -> C {
+        let mut sum = C::zero();
+        for v in self.0 {
+            sum = sum + v.abs();
+        }
+        sum
     }
 }
 
